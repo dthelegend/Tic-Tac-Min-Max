@@ -8,13 +8,12 @@ from time import time
 SPACING = 3
 
 class BoardState():
-    player = 0 # -1 for player, 1 for computer
     state = [[0 for _ in range(3)] for _ in range(3)]
 
     def __init__(self, state = None, player = 0):
         if(state is not None):
             self.state = state
-        self.player = player
+        self.player = player # -1 for player, 1 for computer
 
     @cache
     def get_valid(self):
@@ -36,6 +35,27 @@ class BoardState():
     def get_children(self):
         return [self.get_child(move) for move in self.get_valid()]
     
+    @cache
+    def get_alphabeta_value(self, alpha=float('-inf'), beta=float('inf')):
+        if(value := self.goal_test()):
+            return value
+        value = float('inf')
+        if self.player == 1:
+            value = float('-inf')
+            for child in self.get_children():
+                value = max(value, child.get_alphabeta_value(alpha, beta))
+                alpha = max(alpha, value)
+                if alpha > beta:
+                    break
+        else:
+            value = float('inf')
+            for child in self.get_children():
+                value = min(value, child.get_alphabeta_value(alpha, beta))
+                beta = min(beta, value)
+                if alpha > beta:
+                    break
+        return value
+
     @cache
     def goal_test(self):
         for k in [-1, 1]:
@@ -69,7 +89,7 @@ class BoardState():
         if(self.player == -1):
             try:
                 io = reversed([(int(x) - 1) for x in input("Enter a move (y, x): ").split(',')])
-                return self.get_child(tuple(io))
+                tbr = self.get_child(tuple(io))
             except (ValueError, KeyError):
                 print("BAD MOVE")
                 tbr = self
@@ -80,11 +100,11 @@ class BoardState():
                 if(max_child is None):
                     max_child = child
                     continue
+                # if(child.get_alphabeta_value() > max_child.get_alphabeta_value()):
                 if(child.get_utility_value() > max_child.get_utility_value()):
                     max_child = child
             tbr = max_child
-            print("Computer took: " + str(time() - st) + "ms")
-        # print("NEXT STATE (Player " + str(tbr.player) + "): " + str(tbr) + " // " + str(tbr.goal_test()))
+            print("Computer took: " + str(time() - st) + "s")
         if(tbr == None):
             return None
         if((test := tbr.goal_test()) != 0 or len(tbr.get_children()) <= 0):
@@ -124,7 +144,7 @@ class BoardState():
             " " * (spacing * 2 + 1) + "|" + " " * (spacing * 2 + 1) + "|" + " " * (spacing * 2 + 1)
 
 if(__name__=='__main__'):
-    current_board = BoardState(player=1)
+    current_board = BoardState(player=-1)
     while current_board:
         try:
             current_board = current_board.play_turn()
